@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Школьные мероприятия</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --paper-bg: #fdfbf7;
+            --line-color: #d4c5b5;
+            --margin-color: #e07a5f;
+            --accent: #8d6e63;
+            --ink: #3e2723;
+            --muted: #6d4c41;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Patrick Hand', 'Comfortaa', cursive;
+            background: #e8dfd1;
+            color: var(--ink);
+            overflow-x: hidden;
+        }
+
+        /* ---------- ФОН ТЕТРАДКИ ---------- */
+        .notebook {
+            position: relative;
+            max-width: 430px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: var(--paper-bg);
+
+            /* Клетки */
+            background-image:
+                linear-gradient(var(--line-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--line-color) 1px, transparent 1px);
+            background-size: 24px 24px;
+            /* Красное поле слева */
+            background-image:
+                linear-gradient(var(--line-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--line-color) 1px, transparent 1px),
+                linear-gradient(90deg, #f5c6c6 62px, transparent 62px);
+            background-size: 24px 24px, 24px 24px, 100% 100%;
+
+            border-top: 12px solid #f5c6c6;
+            border-bottom: 12px solid #f5c6c6;
+            box-shadow:
+                0 8px 24px rgba(0,0,0,0.12),
+                0 0 0 1px rgba(0,0,0,0.03);
+            border-radius: 16px;
+            padding-bottom: 40px;
+        }
+
+        .notebook::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 60px; right: 0; bottom: 0;
+            border-left: 4px solid var(--margin-color);
+            pointer-events: none;
+            z-index: 1;
+            border-radius: 16px 0 0 16px;
+        }
+
+        /* ---------- ЗАГОЛОВОК ---------- */
+        header {
+            text-align: center;
+            padding: 40px 20px 10px 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        h1 {
+            font-family: 'Comfortaa', cursive;
+            font-size: 34px;
+            color: #a63d40;
+            margin: 0 0 4px 0;
+            text-shadow: 0 2px 0 rgba(255,255,255,0.7);
+            letter-spacing: 0.5px;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: var(--muted);
+            margin: 0;
+            font-style: italic;
+        }
+
+        /* ---------- СПИСОК СОБЫТИЙ ---------- */
+        .events-list {
+            padding: 0 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .no-events {
+            text-align: center;
+            color: #a1887f;
+            font-size: 16px;
+            padding: 60px 20px;
+        }
+
+        .event-card {
+            background: #ffffff;
+            border: 1px solid #d7ccc8;
+            border-left: 6px solid var(--margin-color);
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            animation: slideUp 0.4s ease forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .event-title {
+            font-family: 'Comfortaa', cursive;
+            font-size: 20px;
+            font-weight: 700;
+            color: #4e342e;
+            margin: 0 0 6px 0;
+            display: block;
+        }
+
+        .event-date {
+            font-size: 16px;
+            color: #b71c1c;
+            font-weight: 700;
+            margin: 0 0 6px 0;
+            display: block;
+        }
+
+        .event-desc {
+            font-size: 15px;
+            color: #5d4037;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .event-meta {
+            font-size: 12px;
+            color: #8d6e63;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* ---------- ФОРМА ДОБАВЛЕНИЯ ---------- */
+        .add-form {
+            margin: 24px 20px;
+            padding: 20px;
+            background: #fff;
+            border: 1px dashed #bcaaa4;
+            border-radius: 14px;
+            position: relative;
+            z-index: 2;
+            display: none; /* по умолчанию скрыта для не-chief */
+        }
+
+        .add-form h2 {
+            font-family: 'Comfortaa', cursive;
+            font-size: 20px;
+            color: #a63d40;
+            margin: 0 0 16px 0;
+            text-align: center;
+        }
+
+        .form-row {
+            margin-bottom: 14px;
+        }
+
+        .form-row label {
+            display: block;
+            font-size: 14px;
+            color: #6d4c41;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+
+        .form-row input,
+        .form-row textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d7ccc8;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 15px;
+            background: #fffefb;
+            color: var(--ink);
+        }
+
+        .form-row input:focus,
+        .form-row textarea:focus {
+            outline: none;
+            border-color: #a63d40;
+            box-shadow: 0 0 0 3px rgba(166,61,64,0.1);
+        }
+
+        /* Дата выделяется особым цветом */
+        .date-input {
+            background: #fdecea;
+            border-color: #a63d40;
+        }
+
+        .date-input:focus {
+            border-color: #8e2f33;
+        }
+
+        .add-form button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 8px;
+            background: linear-gradient(135deg, #a63d40, #8d6e63);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Comfortaa', cursive;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(166,61,64,0.25);
+        }
+
+        .add-form button:hover {
+            filter: brightness(1.05);
+        }
+
+        .add-form button:active {
+            transform: scale(0.98);
+        }
+
+        /* ---------- СООБЩЕНИЯ ---------- */
+        .msg {
+            margin: 12px 20px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+            z-index: 10;
+            position: relative;
+        }
+
+        .msg.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .msg.error {
+            background: #ffebee;
+            color: #b71c1c;
+            border: 1px solid #ffcdd2;
+        }
+
+        /* ---------- ЧИЕФ БЭДЖ ---------- */
+        .chief-badge {
+            display: inline-block;
+            background: #a63d40;
+            color: #fff;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-left: 8px;
+            vertical-align: middle;
+            font-weight: 700;
+        }
+
+        /* ---------- МОБИЛ ---------- */
+        @media (max-width: 480px) {
+            .notebook {
+                border-radius: 0;
+                min-height: 100vh;
+            }
+            header { padding: 24px 16px 8px 16px; }
+            h1 { font-size: 28px; }
+            .events-list { padding: 0 16px; }
+            .add-form { margin: 16px 16px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="notebook">
+        <header>
+            <h1>📓 Школьные мероприятия</h1>
+            <p class="subtitle">Расписание событий вашей школы</p>
+        </header>
+
+        <div class="events-list" id="eventsList">
+            <div class="no-events" id="noEvents">Мероприятий пока нет.</div>
+        </div>
+
+        <div class="add-form" id="addForm">
+            <h2>➕ Новое мероприятие <span class="chief-badge">ADMIN</span></h2>
+
+            <div class="form-row">
+                <label for="eventTitle">Название события</label>
+                <input type="text" id="eventTitle" placeholder="Например: Линейка 1 сентября">
+            </div>
+
+            <div class="form-row">
+                <label for="eventDate">📅 Дата события</label>
+                <input type="text" id="eventDate" class="date-input" placeholder="01.09.2026">
+            </div>
+
+            <div class="form-row">
+                <label for="eventDesc">Описание события</label>
+                <textarea id="eventDesc" rows="3" placeholder="Что запланировано?"></textarea>
+            </div>
+
+            <button type="button" id="saveBtn">Сохранить мероприятие</button>
+        </div>
+
+        <div id="msg" class="msg"></div>
+    </div>
+
+    <script>
+        // ================= НАСТРОЙКА =================
+        // Впишите сюда ID главных администраторов (целочисленные)
+        // Узнать свой ID можно у бота @userinfobot
+        const CHIEF_IDS = [5255430607, 7416919318]; // <-- ЗАМЕНИТЕ на свои ID
+
+        // ================= TELEGRAM WEB APP =================
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        tg.setHeaderColor('#fdfbf7');
+        tg.setBackgroundColor('#fdfbf7');
+
+        const user = tg.initDataUnsafe?.user;
+        const userId = user?.id || null;
+        const isChief = userId && CHIEF_IDS.includes(Number(userId));
+
+        // Показываем форму только chief
+        const addForm = document.getElementById('addForm');
+        if (isChief) {
+            addForm.style.display = 'block';
+        }
+
+        // ================= СОБЫТИЯ =================
+        let events = JSON.parse(localStorage.getItem('school_events') || '[]');
+
+        const eventsList = document.getElementById('eventsList');
+        const noEvents = document.getElementById('noEvents');
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderEvents() {
+            eventsList.innerHTML = '';
+            if (events.length === 0) {
+                eventsList.appendChild(noEvents);
+                return;
+            }
+
+            // Сортируем по дате (строкой, формат ДД.ММ.ГГГГ)
+            const sorted = [...events].sort((a, b) => {
+                return a.date.localeCompare(b.date);
+            });
+
+            sorted.forEach((ev) => {
+                const el = document.createElement('div');
+                el.className = 'event-card';
+                el.innerHTML = `
+                    <span class="event-title">${escapeHtml(ev.title)}</span>
+                    <span class="event-date">📅 ${escapeHtml(ev.date)}</span>
+                    <p class="event-desc">${escapeHtml(ev.desc || '—')}</p>
+                    ${ev.createdBy ? `<div class="event-meta">Добавлено администратором</div>` : ''}
+                `;
+                eventsList.appendChild(el);
+            });
+        }
+
+        function showMsg(text, type) {
+            const msg = document.getElementById('msg');
+            msg.textContent = text;
+            msg.className = 'msg ' + type;
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 4000);
+        }
+
+        // ================= ФОРМА =================
+        const saveBtn = document.getElementById('saveBtn');
+        const titleInput = document.getElementById('eventTitle');
+        const dateInput = document.getElementById('eventDate');
+        const descInput = document.getElementById('eventDesc');
+
+        saveBtn.addEventListener('click', () => {
+            const title = titleInput.value.trim();
+            const date = dateInput.value.trim();
+            const desc = descInput.value.trim();
+
+            if (!title || !date) {
+                showMsg('Заполните название и дату мероприятия!', 'error');
+                return;
+            }
+
+            const newEvent = {
+                id: Date.now(),
+                title: title,
+                date: date,
+                desc: desc,
+                createdBy: userId,
+                createdAt: new Date().toISOString()
+            };
+
+            events.unshift(newEvent);
+            localStorage.setItem('school_events', JSON.stringify(events));
+
+            titleInput.value = '';
+            dateInput.value = '';
+            descInput.value = '';
+
+            renderEvents();
+            showMsg('Мероприятие добавлено в тетрадку!', 'success');
+
+            try { tg.sendData(JSON.stringify({ action: 'event_added', event: newEvent })); } catch(e) {}
+        });
+
+        // ================= СТАРТ =================
+        renderEvents();
+
+        if (!isChief) {
+            console.log('Пользователь не chief. Доступен только просмотр.');
+        }
+    </script>
+</body>
+</html>
